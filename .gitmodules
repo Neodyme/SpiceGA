@@ -1,0 +1,3 @@
+[submodule "PySpice"]
+	path = PySpice
+	url = https://github.com/Neodyme/PySpice.git
