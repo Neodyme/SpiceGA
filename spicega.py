@@ -2,6 +2,7 @@
 #coding=utf-8
 
 import sys
+import os
 
 import numpy
 
@@ -22,9 +23,7 @@ from PySpice.Spice.Netlist import Circuit
 
 import  traceback
 
-import time
-
-import os
+import time, datetime
 
 import random
 import deap
@@ -46,20 +45,21 @@ SIM_COUNTER = 0
 global GLBL_COUNTER
 GLBL_COUNTER = 0
 
-N_NODES = 3
+N_NODES = 8
 POPSIZE = 200
 TARGET = .9
-CXPB, MUTPB, NGEN = 0.92, 0.17, 12
+CXPB, MUTPB, NGEN = 0.92, 0.5, 50
 
 #NODELIST =  {-3:'vcc', -2:'out', -1:'vin'}
 NODELIST =  { -2:'out', -1:'vin'}
 #{-4:'vdd', -3:'vcc', -2:'out', -1:'in'}
 NODELIST.update ({i:i for i in range(0, N_NODES)})
 NODELIST_keys = [i for i in NODELIST.keys()]
-
+VDD_V = '5V'
+VDD_V = '-5V'
 HISTORY = {}
 
-ELEMLIST = [0, 1, 2, 6]
+ELEMLIST = [0, 1, 2, 3, 4, 6]
 #print(NODELIST_keys)
 
 toolbox.register("attr_type", random.choice, ELEMLIST)  # type
@@ -135,23 +135,28 @@ def mate(i1, i2):
     holder = 0.
     holder2 = 0
 
+    chooser = [i1, i2]
     for i in range(N_NODES):
-        if random.randint(0, 100) > 60 and i2[i * 5] == i1[i * 5]:
+        if random.randint(0, 100) > 60:
+            holder = random.choice(chooser) 
+            i2[i * 5 + 0] = holder[i * 5 + 0]
+            i1[i * 5 + 0] = holder[i * 5 + 0]
+            i2[i * 5 + 1] = holder[i * 5 + 1]
+            i1[i * 5 + 1] = holder[i * 5 + 1]
+        if i2[i * 5] == i1[i * 5] and random.randint(0, 100) > 60:
             i1[i * 5 + 1] = mkattr(i2[i * 5], value=math.floor(sum([i1[i * 5 + 1], i2[i * 5 + 1]]) / 2), diverg=int(abs(i1[i * 5 + 1] - i2[i * 5 + 1]) / 2))
             i2[i * 5 + 1] = mkattr(i2[i * 5], value=math.floor(sum([i1[i * 5 + 1], i2[i * 5 + 1]]) / 2), diverg=int(abs(i1[i * 5 + 1] - i2[i * 5 + 1]) / 2))
-        if random.randint(0, 100) > 50:
-            holder2 = i2[i * 5 + 2]
-            i2[i * 5 + 2] = i1[i * 5 + 2]
-            i1[i * 5 + 2] = holder2
-        if random.randint(0, 100) > 50:
-            holder2 = i2[i * 5 + 3]
-            i2[i * 5 + 3] = i1[i * 5 + 3]
-            i1[i * 5 + 3] = holder2
+        i2[i * 5 + 2] = random.choice(chooser)[i * 5 + 2]
+        i1[i * 5 + 2] = random.choice(chooser)[i * 5 + 2]
+        i2[i * 5 + 3] = random.choice(chooser)[i * 5 + 3]
+        i1[i * 5 + 3] = random.choice(chooser)[i * 5 + 3]
+        i2[i * 5 + 4] = random.choice(chooser)[i * 5 + 4]
+        i1[i * 5 + 4] = random.choice(chooser)[i * 5 + 4]
     return (i1, i2)
 toolbox.register("mate", mate)
 
 def target (inp):
-    return 4.5
+    return inp/2
 def evaluator(inp, outp):
     return (1 / math.sqrt(1 + (abs(target(inp) - outp) * 20))) * ((abs(inp - (outp)) > abs(inp * 0.05)))
 toolbox.register("evaluator", evaluator)
@@ -168,7 +173,7 @@ def generate_and_test(gui, spice_library,  ind):
     sys.stdout.write('  {:.1%}%\b\r'.format(SIM_COUNTER / POPSIZE))
     sys.stdout.flush()
 
-    circuit.V('vcc', 'vcc', circuit.gnd, '5V')
+    circuit.V('vcc', 'vcc', circuit.gnd, VDD_V)
     circuit.V('vdd', 'vdd', circuit.gnd, '-5V')
     circuit.Sinusoidal('input', 'vin', circuit.gnd, amplitude=5)
     GLBL_COUNTER += 1
@@ -249,13 +254,15 @@ history = deap.tools.History()
 
 
 toolbox.register("select", tools.selTournament)
-#toolbox.register("select", tools.selRoulette)    
+toolbox.register("selectelits", tools.selBest)
 def start(gui, spice_library):
     global SIM_COUNTER
     global DEAD
     global MUTD_COUNTER
     global GEN
     global CROS_COUNTER
+    f=open("gen_{}.csv".format(datetime.datetime.now().replace(microsecond=0)), 'w')
+    f.write("{},{},{},{},{},{},{}\n".format("# generation","max","moyen","ecart-type","# invalides", "# mutations","# croisements"))
 
     pop = toolbox.population(n=POPSIZE)
     history.update(pop)
@@ -272,7 +279,7 @@ def start(gui, spice_library):
         fitnesses = map(toolbox.evaluate, pop)
         for ind, fit in zip(pop, fitnesses):
             ind.fitness.values = fit
-        offspring = toolbox.select(pop, k=POPSIZE - int(0.1 * POPSIZE), tournsize=20)
+        offspring = toolbox.selectelits(pop, k=int(POPSIZE * .1)) + toolbox.select(pop, k=POPSIZE - int(POPSIZE * .1), tournsize= 5)
         offspring = list(map(toolbox.clone, offspring))
 
         for child1, child2 in zip(offspring[::2], offspring[1::2]):
@@ -286,7 +293,7 @@ def start(gui, spice_library):
                 MUTD_COUNTER += 1
                 toolbox.mutate(mutant)
             del mutant.fitness.values
-        # Evaluate the individuals with an invalid fitness
+        GEN += 1
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
         fitnesses = map(toolbox.evaluate, invalid_ind)
         for ind, fit in zip(invalid_ind, fitnesses):
@@ -295,12 +302,12 @@ def start(gui, spice_library):
 
         fits = [ind.fitness.values[0] for ind in pop]
 
-        pop += toolbox.population(n=int(0.1 * POPSIZE))
         length = len(pop)
         sum2 = sum(x*x for x in fits)
         print("  Min={}, Max={} avg={} std={} - deads={} mutations={} crossovers={}".format(min(fits), max(fits), sum(fits) / length, abs(sum2 / length - (sum(fits)/ length)**2)**0.5, DEAD, MUTD_COUNTER, CROS_COUNTER))
-        
-        
+        f.write("{},{},{},{},{},{}\n".format(max(fits), sum(fits)/ length, abs(sum2 / length - (sum(fits)/ length)**2)**0.5, DEAD, MUTD_COUNTER,CROS_COUNTER))
+    f.close()
+
 if __name__=="__main__":
     random.seed()
     spice_library = SpiceLibrary(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'libraries'))
