@@ -237,9 +237,7 @@ class SpiceGA:
             fitnesses = map(self.toolbox.evaluate, pop)
             for ind, fit in zip(pop, fitnesses):
                 ind.fitness.values = fit
-            offspring = self.toolbox.select(pop, k=self.POPSIZE, tournsize= 5)
-            #            offspring = self.toolbox.selectelits(pop, k=int(self.POPSIZE * .1)) + self.toolbox.select(pop, k=self.POPSIZE - int(self.POPSIZE * .1), tournsize= 5)
-
+            offspring = self.toolbox.select(pop, k=self.POPSIZE - 15, tournsize= 5) +  self.toolbox.selectelits(pop, k=15)
             offspring = list(map(self.toolbox.clone, offspring))
 
             for child1, child2 in zip(offspring[::2], offspring[1::2]):
@@ -268,7 +266,7 @@ class SpiceGA:
             self.GENCOUNTER = 0
             sum2 = sum(x*x for x in fits)
             print("  Min={}, Max={} avg={} std={} - deads={} mutations={} crossovers={}".format(min(fits), max(fits), sum(fits) / length, abs(sum2 / length - (sum(fits) / length)**2)**0.5, self.DEAD, self.MUTD_COUNTER, self.CROS_COUNTER))
-            f.write("{},{},{},{},{},{}\n".format(max(fits), sum(fits)/ length, abs(sum2 / length - (sum(fits)/ length)**2)**0.5, self.DEAD, self.MUTD_COUNTER, self.CROS_COUNTER))
+            f.write("{},{},{},{},{},{},{}\n".format(gen, max(fits), sum(fits)/ length, abs(sum2 / length - (sum(fits)/ length)**2)**0.5, self.DEAD, self.MUTD_COUNTER, self.CROS_COUNTER))
         f.close()
 
     def run(self):
@@ -280,7 +278,6 @@ class SpiceGA:
         graph = networkx.DiGraph(self.history.genealogy_tree)
         colors = [float(self.s['pop'][i][1]) for i in graph]
         layers =  {i:(self.s['pop'][i][2], -1 * int(self.s['pop'][i][0]),) for i in self.s['pop'].keys()}
-#        labs =  {i:'{}'.format(i) for i in self.hist.keys()} 
         networkx.draw(graph, pos=layers, node_color=colors)
         print(self.hof)
         plt.show()
