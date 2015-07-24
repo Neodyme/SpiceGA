@@ -16,10 +16,12 @@ import time, datetime
 
 from PySpice.Spice.Netlist import Circuit
 from PySpice.Unit.Units import *
-from matplotlib import pylab
 
 import matplotlib.pyplot as plt
-import networkx
+try:
+    import networkx
+except:
+    print("Networkx library not installed. No graph will be produced")
 
 from PySpice.Spice.Library import SpiceLibrary
 from PySpice.Plot.BodeDiagram import bode_diagram
@@ -30,11 +32,60 @@ from deap import base, tools, creator
 
 import values
 
-#deap.toolbox = deap.base.Toolbox()
-
-#creator.create("FitnessMin", base.Fitness, weights=(.0,))
 creator.create("FitnessMax", base.Fitness, weights=(1.0,))
 creator.create("Individual", list, fitness=creator.FitnessMax)
+
+def mkschematic(ind, nnodes, nodelist, spice_library):
+    circuit = Circuit('generated circuit')
+
+    circuit.V('vcc', 'vcc', circuit.gnd, '5V')
+    circuit.V('vdd', 'vdd', circuit.gnd, '-5V')
+    circuit.Sinusoidal('input', 'vin', circuit.gnd, amplitude=5)
+
+    nodes = 0
+    for i in range(nnodes):
+        if ind[5 * i] == 1:
+            circuit.R(nodes,
+                      nodelist[ind[5 * i + 2]] if ind[5 * i + 2] != 0 else circuit.gnd,
+                      nodelist[ind[5 * i + 3]] if ind[5 * i + 3] != 0 else circuit.gnd,
+                      values.E12R[ind[5 * i + 1]])
+        elif ind[5 * i] == 2:
+            circuit.C(nodes,
+                      nodelist[ind[5 * i + 2]]  if ind[5 * i + 2] != 0 else circuit.gnd,
+                      nodelist[ind[5 * i + 3]]  if ind[5 * i + 3] != 0 else circuit.gnd,
+                      values.E12C[ind[5 * i + 1]])
+        elif ind[5 * i] == 3:
+            circuit.include(spice_library['2n2222a'])
+            circuit.BJT(nodes,
+                        nodelist[ind[5 * i + 2]]  if ind[5 * i + 2] != 0 else circuit.gnd,
+                        nodelist[ind[5 * i + 3]]  if ind[5 * i + 3] != 0 else circuit.gnd,
+                        nodelist[ind[5 * i + 4]]  if ind[5 * i + 4] != 0 else circuit.gnd,
+                        '2n2222a')
+        elif ind[5 * i] == 4:
+            circuit.include(spice_library['2n2907'])
+            circuit.BJT(nodes,
+                        nodelist[ind[5 * i + 2]]  if ind[5 * i + 2] != 0 else circuit.gnd,
+                        nodelist[ind[5 * i + 3]]  if ind[5 * i + 3] != 0 else circuit.gnd,
+                        nodelist[ind[5 * i + 4]]  if ind[5 * i + 4] != 0 else circuit.gnd,
+                        '2n2907')
+        elif ind[5 * i] == 6:
+            circuit.include(spice_library['1N4148'])
+            circuit.X('D{}'.format(nodes),
+                      '1N4148',
+                      nodelist[ind[5 * i + 2]]  if ind[5 * i + 2] != 0 else circuit.gnd,
+                      nodelist[ind[5 * i + 3]]  if ind[5 * i + 3] != 0 else circuit.gnd)
+        elif ind[5 * i] == 5:
+            circuit.L(nodes,
+                      nodelist[ind[5 * i + 2]]  if ind[5 * i + 2] != 0 else circuit.gnd,
+                      nodelist[ind[5 * i + 3]]  if ind[5 * i + 3] != 0 else circuit.gnd,
+                      values.E12I[ind[5 * i + 1]])
+        elif ind[5 * i] == 0:
+            continue
+        else:
+            continue
+        nodes += 1
+    print(circuit)
+
 
 def mkattr(t, value=0, diverg=5):
     if value == 0:
@@ -145,6 +196,7 @@ class SpiceGA:
             i1[i * 5 + 4] = random.choice(chooser)[i * 5 + 4]
         return (i1, i2)
 
+
     def generate_and_test(self, gui, ind):
         circuit = Circuit('generated circuit')
         sys.stdout.write('  {:.1%}%\b\r'.format(self.GENCOUNTER/ self.POPSIZE))
@@ -152,7 +204,7 @@ class SpiceGA:
 
         circuit.V('vcc', 'vcc', circuit.gnd, '5V')
         circuit.V('vdd', 'vdd', circuit.gnd, '-5V')
-        circuit.Sinusoidal('input', 'vin', circuit.gnd, amplitude=5)
+        circuit.Sinusoidal('input', 'vin', circuit.gnd, amplitude=2)
 
         nodes = 0
         try:
@@ -237,7 +289,7 @@ class SpiceGA:
             fitnesses = map(self.toolbox.evaluate, pop)
             for ind, fit in zip(pop, fitnesses):
                 ind.fitness.values = fit
-            offspring = self.toolbox.select(pop, k=self.POPSIZE - 15, tournsize= 5) +  self.toolbox.selectelits(pop, k=15)
+            offspring = self.toolbox.select(pop, k=self.POPSIZE, tournsize= 5)# +  self.toolbox.selectelits(pop, k=15)
             offspring = list(map(self.toolbox.clone, offspring))
 
             for child1, child2 in zip(offspring[::2], offspring[1::2]):
@@ -274,12 +326,17 @@ class SpiceGA:
         print("starting generation")
         print("population={}, max generations={}".format(self.POPSIZE, self.NGEN))
         self.start()
- 
-        graph = networkx.DiGraph(self.history.genealogy_tree)
-        colors = [float(self.s['pop'][i][1]) for i in graph]
-        layers =  {i:(self.s['pop'][i][2], -1 * int(self.s['pop'][i][0]),) for i in self.s['pop'].keys()}
-        networkx.draw(graph, pos=layers, node_color=colors)
-        print(self.hof)
-        plt.show()
+        try: 
+            graph = networkx.DiGraph(self.history.genealogy_tree)
+            colors = [float(self.s['pop'][i][1]) for i in graph]
+            layers =  {i:(self.s['pop'][i][2], -1 * int(self.s['pop'][i][0]),) for i in self.s['pop'].keys()}
+            networkx.draw(graph, pos=layers, node_color=colors)
+            plt.show()
+        except:
+            continue
+        for ind in self.hof:
+            mkschematic(ind, self.N_NODES, self.NODELIST, self.spice_library)
+            print("----------------------------")
+            
         print("generation ended, {} sims".format(self.s['counter']))
     

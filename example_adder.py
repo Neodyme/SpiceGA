@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+ #!/usr/bin/env python3
 #coding=utf-8
 
 import sys
@@ -13,24 +13,24 @@ import spicega
 
 global  CXPB, MUTPB, NGEN, N_NODES, POPSIZE, TARGET
 
-N_NODES = 12
-POPSIZE = 200
+N_NODES = 15
+POPSIZE = 1200
 TARGET = .9
-CXPB, MUTPB, NGEN = 1, 0.1, 30
+CXPB, MUTPB, NGEN = 0.92, 0.1, 30
 
 #NODELIST =  {-3:'vcc', -2:'out', -1:'vin'}
-NODELIST =  { -2:'out', -1:'vin'}
+NODELIST =  {-4:'vdd', -3:'vcc', -2:'out', -1:'vin'}
 #{-4:'vdd', -3:'vcc', -2:'out', -1:'in'}
 NODELIST.update ({i:i for i in range(0, N_NODES)})
 VCC_V = '5V'
 VDD_V = '-5V'
 HISTORY = {}
 
-ELEMLIST = [0, 1, 2, 6]
+ELEMLIST = [0, 1, 2, 3, 4, 6 ]
 #print(NODELIST_keys)
 
 def target (inp):
-    return 4
+    return inp + 1
 def evaluator(inp, outp):
     return (1 / math.sqrt(1 + (abs(target(inp) - outp) * 20))) * ((abs(inp - (outp)) > abs(inp * 0.05)))
 

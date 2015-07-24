@@ -13,10 +13,10 @@ import spicega
 
 global  CXPB, MUTPB, NGEN, N_NODES, POPSIZE, TARGET
 
-N_NODES = 18
+N_NODES = 15
 POPSIZE = 400
 TARGET = .9
-CXPB, MUTPB, NGEN = 0.92, 0.05, 30
+CXPB, MUTPB, NGEN = 0.92, 0.05, 60
 
 #NODELIST =  {-3:'vcc', -2:'out', -1:'vin'}
 NODELIST =  { -2:'out', -1:'vin'}
