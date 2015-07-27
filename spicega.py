@@ -11,8 +11,8 @@ import time, datetime
 
 
 ## Spice logger is disabled
-#import PySpice.Logging.Logging as Logging
-#logger = Logging.setup_logging()
+import PySpice.Logging.Logging as Logging
+logger = Logging.setup_logging(config_file="logging.yml")
 
 from PySpice.Spice.Netlist import Circuit
 from PySpice.Unit.Units import *
@@ -333,10 +333,9 @@ class SpiceGA:
             networkx.draw(graph, pos=layers, node_color=colors)
             plt.show()
         except:
-            continue
+            pass
         for ind in self.hof:
             mkschematic(ind, self.N_NODES, self.NODELIST, self.spice_library)
             print("----------------------------")
-            
         print("generation ended, {} sims".format(self.s['counter']))
     
