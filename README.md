@@ -17,6 +17,7 @@ This project use pyspice and ngSPICE to simulate generated circuits, python-deap
 - PySpice https://github.com/Neodyme/PySpice
 - Numpy
 - Matplotlib
+
 ### Optional dependencies 
 - python3-networkx : useful to generate a genealogy tree resuming the evolution of the simuation
 
