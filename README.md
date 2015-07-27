@@ -1,8 +1,10 @@
 SpiceGA
 =======
 ## Introduction
-SpiceGA is a Python 3 application designed to produce evolved circuits meeting the differents constraints specified by the user.
-This project use ngSPICE to simulate generated circuits 
+SpiceGA is a Python 3 application designed to produce evolved circuits. This application use a evolutionary algorithm to create an electric circuit who meet the differents constraints specified by the user.
+During run, many electrical circuits are created and tested, learning to create valids circuit who evolve during generation and atempts to reach the defined objective. 
+
+This project use pyspice and ngSPICE to simulate generated circuits, python-deap for the genetic toolsuit.
 
 # Installation
 ### dependencies 
@@ -15,4 +17,4 @@ This project use ngSPICE to simulate generated circuits
 - Numpy
 - Matplotlib
 ### Optional dependencies 
-- python3-networkx : useful to generate a bullet map of the s
+- python3-networkx : useful to generate a genealogy tree resuming the evolution of the simuation
